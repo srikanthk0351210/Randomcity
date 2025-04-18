@@ -1,11 +1,14 @@
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
     id("kotlin-parcelize")
 }
+
 
 android {
     namespace = "com.fullcreative.citypulse"
@@ -22,11 +25,19 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
-        val googleMapsApiKey = project.findProperty("GOOGLE_MAPS_API_KEY") ?: ""
-        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
     }
 
+    secrets {
+        propertiesFileName = "secrets.properties"
+        defaultPropertiesFileName = "local.defaults.properties"
+
+    }
     buildTypes {
+
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -35,6 +46,8 @@ android {
             )
         }
     }
+
+    // Keep the rest of your existing configuration
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -45,8 +58,6 @@ android {
     kotlin {
         jvmToolchain(17)
     }
-
-
     buildFeatures {
         compose = true
     }
@@ -114,6 +125,7 @@ dependencies {
     implementation(libs.play.services.maps.v1920)
     implementation(libs.kotlinx.datetime.v040)
     implementation(libs.androidx.lifecycle.process)
+
     implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
 
 
