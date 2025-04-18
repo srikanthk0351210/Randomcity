@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Randomcity</string>
+    <string name="try_again">Try Again</string>
+    <string name="select_city_details">Select a city to view details</string>
+    <string name="city_details">City Details</string>
+    <string name="city_pulse">City Pulse</string>
+</resources>
