@@ -36,7 +36,7 @@ fun CityFeedScreen(
 
                 if (isTabletLandscape) {
                     Row(modifier = Modifier.fillMaxSize()) {
-                        // Master list takes 40% width
+
                         CityListContent(
                             modifier = Modifier.weight(0.4f),
                             cities = cities,
@@ -44,7 +44,7 @@ fun CityFeedScreen(
                             onItemClick = onItemClick
                         )
 
-                        // Actual Map View takes 60% width
+
                         Box(modifier = Modifier.weight(0.6f)) {
                             selectedCity?.let { city ->
                                 CityMapView(
