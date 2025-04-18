@@ -19,7 +19,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBgptmwsI5rjmxxfhAA8N3hZETMNMoZh7Q" />
+            android:value="${googleMapsApiKey}" />
         <activity
             android:name="com.fullcreative.citypulse.MainActivity"
             android:exported="true"
