@@ -1,18 +1,22 @@
 package com.fullcreative.citypulse.presentation.screens.cityfeed
 
+import android.app.Application
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.fullcreative.citypulse.domain.model.CityEvent
 import com.fullcreative.citypulse.domain.repository.CityEventRepository
 import com.fullcreative.citypulse.domain.usecase.GenerateCityEventUseCase
 import com.fullcreative.citypulse.domain.usecase.GetCitiesUseCase
-import com.fullcreative.citypulse.presentation.screens.citylocationdetail.CityLocationDetailUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -20,33 +24,53 @@ import javax.inject.Inject
 class CityFeedViewModel @Inject constructor(
     private val getCities: GetCitiesUseCase,
     private val generateEvent: GenerateCityEventUseCase,
-    private val repository: CityEventRepository
+    private val repository: CityEventRepository,
 ) : ViewModel() {
 
-    private val _cities= MutableStateFlow<CityFeedState>(CityFeedState.Loading)
-    val cities: StateFlow<CityFeedState> = _cities
+    private val _cities = MutableStateFlow<CityFeedState>(CityFeedState.Loading)
+    val cities: StateFlow<CityFeedState> = _cities.asStateFlow()
 
-
-
+    private var citiesJob: Job? = null
     private var producerJob: Job? = null
+    private val lifecycleObserver = AppLifecycleObserver()
 
     init {
+        ProcessLifecycleOwner.get().lifecycle.addObserver(lifecycleObserver)
         loadCities()
-        startProducing(true)
     }
 
+    inner class AppLifecycleObserver : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            startProducing(true)
+        }
 
+        override fun onStop(owner: LifecycleOwner) {
+            stopProducing()
+        }
+    }
 
     fun loadCities() {
-        viewModelScope.launch {
+        citiesJob?.cancel()
+        citiesJob = viewModelScope.launch {
             _cities.value = CityFeedState.Loading
             try {
                 getCities()
+                    .catch { e ->
+                        _cities.value = CityFeedState.Error(
+                            e.message ?: "Failed to load cities"
+                        )
+                    }
                     .collect { cities ->
-                        _cities.value = CityFeedState.Success(cities)
+                        _cities.value = if (cities.isNotEmpty()) {
+                            CityFeedState.Success(cities)
+                        } else {
+                            CityFeedState.Error("No cities available")
+                        }
                     }
             } catch (e: Exception) {
-                _cities.value = CityFeedState.Error(e.message ?: "Unknown error")
+                _cities.value = CityFeedState.Error(
+                    e.message ?: "Unknown error occurred"
+                )
             }
         }
     }
@@ -55,17 +79,15 @@ class CityFeedViewModel @Inject constructor(
         loadCities()
     }
 
-    fun startProducing(isAppInForeground: Boolean) {
+    fun startProducing(shouldProduce: Boolean) {
         producerJob?.cancel()
-        if (isAppInForeground) {
+        if (shouldProduce) {
             producerJob = viewModelScope.launch {
                 delay(1000) // Initial delay
-                while (true) {
+                while (isActive) {
                     val newEvent = generateEvent()
                     repository.insertCity(newEvent)
-                    repeat(5) {
-                        if (producerJob?.isActive == true) delay(1000)
-                    }
+                    delay(5000)
                 }
             }
         }
@@ -73,6 +95,14 @@ class CityFeedViewModel @Inject constructor(
 
     fun stopProducing() {
         producerJob?.cancel()
+        producerJob = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(lifecycleObserver)
+        citiesJob?.cancel()
+        stopProducing()
     }
 }
 

@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.maps.compose.v2114)
     implementation(libs.play.services.maps.v1920)
     implementation(libs.kotlinx.datetime.v040)
+    implementation(libs.androidx.lifecycle.process)
     implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
 
 

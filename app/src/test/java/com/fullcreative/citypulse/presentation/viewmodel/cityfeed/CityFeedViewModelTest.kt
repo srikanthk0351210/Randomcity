@@ -21,8 +21,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mock
 import org.mockito.Mockito
-import org.mockito.junit.MockitoJUnitRunner
 import org.mockito.Mockito.`when`
+import org.mockito.junit.MockitoJUnitRunner
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(MockitoJUnitRunner::class)
@@ -45,7 +45,6 @@ class CityFeedViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
 
-        // Use the standard `Mockito.when` syntax
         `when`(mockGetCitiesUseCase()).thenReturn(flowOf(emptyList()))
         `when`(mockGenerateEventUseCase()).thenReturn(
             CityEvent(id = 0, name = "Default", timestamp = 0L, color = "gray")
@@ -64,64 +63,44 @@ class CityFeedViewModelTest {
     }
 
     @Test
-    fun `init should load cities and start producing`() = runTest {
-        val mockCities = listOf(CityEvent(id = 1, name = "City1", timestamp = 123456789, color = "red"))
+    fun `loadCities should update state to Success when cities are returned`() = runTest {
+        val mockCities = listOf(CityEvent(1, "City1",  "red",123456789))
         `when`(mockGetCitiesUseCase()).thenReturn(flowOf(mockCities))
-        `when`(mockGenerateEventUseCase()).thenReturn(CityEvent(id = 2, name = "City2", timestamp = 123456790, color = "blue"))
-
-        viewModel = CityFeedViewModel(mockGetCitiesUseCase, mockGenerateEventUseCase, mockRepository)
-
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        assertEquals(CityFeedState.Success(mockCities), viewModel.cities.value)
-        Mockito.verify(mockGetCitiesUseCase).invoke()
-        Mockito.verify(mockRepository).insertCity(Mockito.any())
-    }
-
-    @Test
-    fun `loadCities should update state to Loading initially`() = runTest {
-        val mockCities = listOf(CityEvent(id = 1, name = "City1", timestamp = 123456789, color = "red"))
-        `when`(mockGetCitiesUseCase()).thenReturn(flow { emit(mockCities) })
 
         viewModel.loadCities()
 
         assertEquals(CityFeedState.Loading, viewModel.cities.value)
 
         testDispatcher.scheduler.advanceUntilIdle()
+
         assertEquals(CityFeedState.Success(mockCities), viewModel.cities.value)
     }
 
     @Test
-    fun `loadCities should handle errors`() = runTest {
-        val errorMessage = "Test error"
-        `when`(mockGetCitiesUseCase()).thenReturn(flow { throw RuntimeException(errorMessage) })
+    fun `loadCities should emit Error state when exception is thrown`() = runTest {
+        val errorMsg = "Test error"
+        `when`(mockGetCitiesUseCase()).thenReturn(flow { throw RuntimeException(errorMsg) })
 
         viewModel.loadCities()
-
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals(CityFeedState.Error(errorMessage), viewModel.cities.value)
+        assertEquals(CityFeedState.Error(errorMsg), viewModel.cities.value)
     }
 
     @Test
-    fun `refreshData should reload cities`() = runTest {
-        val mockCities1 = listOf(CityEvent(id = 1, name = "City1", timestamp = 123456789, color = "red"))
-        val mockCities2 = listOf(CityEvent(id = 2, name = "City2", timestamp = 123456790, color = "blue"))
-
-        `when`(mockGetCitiesUseCase())
-            .thenReturn(flowOf(mockCities1))
-            .thenReturn(flowOf(mockCities2))
+    fun `refreshData should trigger loadCities`() = runTest {
+        val mockCities = listOf(CityEvent(2, "City2", "blue",123456790))
+        `when`(mockGetCitiesUseCase()).thenReturn(flowOf(mockCities))
 
         viewModel.refreshData()
         testDispatcher.scheduler.advanceUntilIdle()
-        assertEquals(CityFeedState.Success(mockCities2), viewModel.cities.value)
 
-        Mockito.verify(mockGetCitiesUseCase, Mockito.times(2)).invoke()
+        assertEquals(CityFeedState.Success(mockCities), viewModel.cities.value)
     }
 
     @Test
-    fun `startProducing should generate events when app is in foreground`() = runTest {
-        val mockEvent = CityEvent(id = 1, name = "City1", timestamp = 123456789, color = "red")
+    fun `startProducing true should generate and insert city events`() = runTest {
+        val mockEvent = CityEvent(3, "City3", "green",123456791)
         `when`(mockGenerateEventUseCase()).thenReturn(mockEvent)
 
         viewModel.startProducing(true)
@@ -132,7 +111,7 @@ class CityFeedViewModelTest {
     }
 
     @Test
-    fun `startProducing should not generate events when app is in background`() = runTest {
+    fun `startProducing false should not generate events`() = runTest {
         viewModel.startProducing(false)
         testDispatcher.scheduler.advanceTimeBy(6000)
 
@@ -141,8 +120,8 @@ class CityFeedViewModelTest {
     }
 
     @Test
-    fun `stopProducing should cancel the producer job`() = runTest {
-        val mockEvent = CityEvent(id = 1, name = "City1", timestamp = 123456789, color = "red")
+    fun `stopProducing should cancel the job`() = runTest {
+        val mockEvent = CityEvent(4, "City4", "orange",123456792)
         `when`(mockGenerateEventUseCase()).thenReturn(mockEvent)
 
         viewModel.startProducing(true)
