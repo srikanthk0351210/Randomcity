@@ -23,11 +23,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             RandomcityTheme {
-                // Create NavController instance
                 val navController = rememberNavController()
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    // Replace Greeting with NavGraph
                     CityPulseNavGraph(
                         navController = navController,
                         modifier = Modifier.padding(innerPadding)
